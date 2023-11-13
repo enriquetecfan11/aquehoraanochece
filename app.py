@@ -10,17 +10,11 @@ st.title("¿A qué hora anochece?")
 # Agregar un campo de búsqueda de ubicación
 ubicacion = st.text_input("Ingrese su ubicación:")
 
-# Obtener la ubicación del usuario
-if st.button("Detectar ubicación"):
-    # Aquí puedes usar algún servicio de geolocalización o simplemente pedir al usuario que ingrese manualmente
-    # En este ejemplo, asumimos que el usuario ingresa la ubicación manualmente
-    st.warning("¡La detección automática de ubicación no está implementada en este ejemplo!")
-
 # Agregar un campo de fecha
 fecha = st.date_input("Seleccione la fecha:", datetime.today())
 
 # Mapa interactivo
-mapa = folium.Map(location=[0, 0], zoom_start=2)
+mapa = folium.Map(location=[47.776, 1.672], zoom_start=8)
 
 # Botón para obtener la hora de la puesta de sol
 if st.button("Obtener hora de la puesta de sol"):
@@ -35,7 +29,9 @@ if st.button("Obtener hora de la puesta de sol"):
                 lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
                 # Actualizar el mapa con la nueva ubicación
                 mapa.location = [lat, lon]
-                mapa.zoom_start = 10
+                mapa.zoom_start = 20
+                folium.Marker([lat, lon], popup=ubicacion).add_to(mapa)
+
         except Exception as e:
             st.error(f"Error al obtener las coordenadas: {e}")
 
@@ -45,8 +41,15 @@ if st.button("Obtener hora de la puesta de sol"):
 
     # Verificar si la solicitud fue exitosa
     if data["status"] == "OK":
-        sunset_time = data["results"]["sunset"]
-        st.success(f"La hora de la puesta de sol en {ubicacion} el {fecha.strftime('%Y-%m-%d')} es a las {sunset_time}")
+        sunset_time_utc = data["results"]["sunset"]
+        
+        # Convertir la hora de la puesta de sol a un objeto datetime
+        sunset_datetime_utc = datetime.strptime(sunset_time_utc, '%Y-%m-%dT%H:%M:%S+00:00')
+
+        # Convertir la hora de la puesta de sol a la zona horaria del usuario
+        sunset_datetime_user_timezone = sunset_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')
+        
+        st.success(f"La hora de la puesta de sol en {ubicacion} el {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_user_timezone}")
     else:
         st.error("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
 
