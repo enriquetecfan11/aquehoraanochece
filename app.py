@@ -19,13 +19,12 @@ if ubicacion:
         # Only get 2 decimal places
         latnew = round(float(lat), 2)
         lonnew = round(float(lon), 4)
-        st.success(f"Las coordenadas de {ubicacion} son ({latnew}, {lonnew})")
 
     except Exception as e:  
         st.error(f"Error al obtener las coordenadas: {e}")
 
 # Agregar un campo de fecha
-fecha = st.date_input("Seleccione la fecha:", datetime.today())
+fecha = st.date_input("Seleccione la fecha que ver cuando amanece:", datetime.today())
 
 # Botón para obtener la hora de la puesta de sol
 if st.button("Obtener hora de la puesta de sol"):
@@ -59,10 +58,13 @@ if st.button("Obtener hora de la puesta de sol"):
 
         # Pasar de utc a utc+1
         sunset_datetime_user_timezone_1 = datetime.strptime(sunset_datetime_user_timezone, '%Y-%m-%d %H:%M:%S') + timedelta(hours=1)
+        # Pero solo quiero la hora
+        sunset_datetime_user_timezone_1 = sunset_datetime_user_timezone_1.strftime('%H:%M:%S')
 
         print('UTC +1 : ', sunset_datetime_user_timezone_1)
 
         
-        st.success(f"La hora de la puesta de sol en {ubicacion} el {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_user_timezone_1}")
+        st.success(f"La hora de la puesta de sol en {ubicacion} el dia {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_user_timezone_1}")
+        st.write(f"Las coordenadas de {ubicacion} son ({latnew}, {lonnew})")
     else:
         st.error("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
