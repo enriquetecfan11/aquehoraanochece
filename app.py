@@ -24,7 +24,7 @@ if ubicacion:
         st.error(f"Error al obtener las coordenadas: {e}")
 
 # Agregar un campo de fecha
-fecha = st.date_input("Seleccione la fecha que ver cuando amanece:", datetime.today())
+fecha = st.date_input("Seleccione la fecha que ver cuando anochece:", datetime.today())
 
 # Botón para obtener la hora de la puesta de sol
 if st.button("Obtener hora de la puesta de sol"):
