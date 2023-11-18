@@ -4,6 +4,8 @@ import requests
 
 # Página principal
 st.title("¿A qué hora anochece?")
+st.set_page_config(page_title='A qué hora anochece', page_icon='🌙', layout='wide', initial_sidebar_state='auto')
+
 
 # Agregar un campo de búsqueda de ubicación
 ubicacion = st.text_input("Ingrese su ubicación:")
