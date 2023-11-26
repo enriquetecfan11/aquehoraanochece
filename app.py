@@ -1,7 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import requests
-from streamlit_folium import folium_static
 from deep_translator import GoogleTranslator
 
 
