@@ -35,7 +35,7 @@ st.markdown(
 st.title('A qué hora anochece')
 st.markdown("---")
 
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.beta_columns([1, 1])  # Cambia 'columns' por 'beta_columns'
 lat, lon = None, None
 
 with col1:
