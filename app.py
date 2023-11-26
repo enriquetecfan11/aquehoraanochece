@@ -1,71 +1,102 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import requests
+import folium
+from streamlit_folium import folium_static
+from deep_translator import GoogleTranslator
 
-# Página principal
-st.set_page_config(page_title='A qué hora anochece', page_icon='🌙', layout='wide', initial_sidebar_state='auto')
+st.set_page_config(
+    page_title='A qué hora anochece',
+    page_icon='🌙',
+    layout='wide',
+    initial_sidebar_state='auto'
+)
 
+st.markdown(
+    """
+    <style>
+    .title {
+        font-size: 36px;
+        color: #333333;
+    }
+    .container {
+        max-width: 800px;
+        margin: auto;
+    }
+    .button {
+        padding: 10px 20px;
+        font-weight: bold;
+        border-radius: 5px;
+        background-color: #3498db;
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# Agregar un campo de búsqueda de ubicación
-ubicacion = st.text_input("Ingrese su ubicación:")
+st.title('A qué hora anochece')
+st.markdown("---")
 
-# Obtener latitud y longitud de la ubicación ingresada
-if ubicacion:
-    try:
-        response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}")
+col1, col2 = st.columns([1, 1])
+lat, lon = None, None
+
+with col1:
+    ubicacion = st.text_input("Ingrese su ubicación:")
+    fecha = st.date_input("Seleccione la fecha:", datetime.today())
+    #st.markdown("---")
+    if st.button("Obtener hora de la puesta de sol", key='get_sunset_time'):
+        if ubicacion:
+            try:
+                response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}")
+                data = response.json()
+                lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
+                api_url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date={fecha.strftime('%Y-%m-%d')}&formatted=0"
+            except Exception as e:
+                st.error(f"Error al obtener las coordenadas: {e}")
+        else:
+            st.error("Ubicación no especificada. Por favor, ingrese una ubicación válida.")
+            st.stop()
+
+        response = requests.get(api_url)
         data = response.json()
-        lat = data[0]["lat"]
-        lon = data[0]["lon"]
-        # Only get the first result
-        # Only get 2 decimal places
-        latnew = round(float(lat), 2)
-        lonnew = round(float(lon), 4)
 
-    except Exception as e:  
-        st.error(f"Error al obtener las coordenadas: {e}")
+        if data["status"] == "OK":
+            sunset_time_utc = data["results"]["sunset"]
+            sunset_datetime_utc = datetime.strptime(sunset_time_utc, '%Y-%m-%dT%H:%M:%S+00:00')
+            sunset_datetime_user_timezone = sunset_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')
+            sunset_datetime_user_timezone_1 = datetime.strptime(sunset_datetime_user_timezone, '%Y-%m-%d %H:%M:%S') + timedelta(hours=1)
+            st.success(f"La hora de la puesta de sol en {ubicacion} el {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_user_timezone_1} UTC+1")
 
-# Agregar un campo de fecha
-fecha = st.date_input("Seleccione la fecha que ver cuando anochece:", datetime.today())
+            if lat is not None and lon is not None:
+              # Obtener datos meteorológicos usando la API de OpenWeatherMap
+              api_key = '959d55cbfd41bca8951a491bde080a8c'
+              weather_url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}"
 
-# Botón para obtener la hora de la puesta de sol
-if st.button("Obtener hora de la puesta de sol"):
-    # Construir la URL para la API de sunrise-sunset.org
-    api_url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date={fecha.strftime('%Y-%m-%d')}&formatted=0"
+              weather_response = requests.get(weather_url)
+              weather_data = weather_response.json()
 
-    # Verificar si la ubicación no está vacía
-    if ubicacion:
-        # Intentar obtener las coordenadas usando algún servicio de geocodificación
-        try:
-            response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}")
-            data = response.json()
-        except Exception as e:
-            st.error(f"Error al obtener las coordenadas: {e}")
+            if weather_data['cod'] == 200:
+                weather_description = weather_data['weather'][0]['description'].capitalize()
+                weather_description_translated = GoogleTranslator(source='auto', target='es').translate(weather_description)
+                temperature = weather_data['main']['temp']
+                temperature_celsius = temperature - 273.15  # Convertir a Celsius
 
-    # Hacer la solicitud a la API
-    response = requests.get(api_url)
-    data = response.json()
+                st.markdown("---")
+                st.markdown("### Información meteorológica")
+                st.markdown(f"El clima en {ubicacion} es {weather_description_translated} con una temperatura de {temperature_celsius:.2f}°C")
+                st.markdown("---")
+            else:
+                st.error("No se pudo obtener la información del clima.")
+        else:
+            st.error("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
+            st.write("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
 
-    # Verificar si la solicitud fue exitosa
-    if data["status"] == "OK":
-        sunset_time_utc = data["results"]["sunset"]
-        
-        # Convertir la hora de la puesta de sol a un objeto datetime
-        sunset_datetime_utc = datetime.strptime(sunset_time_utc, '%Y-%m-%dT%H:%M:%S+00:00')
 
-        # Convertir la hora de la puesta de sol a la zona horaria del usuario
-        sunset_datetime_user_timezone = sunset_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')
-
-        print('UTC: ', sunset_datetime_user_timezone)
-
-        # Pasar de utc a utc+1
-        sunset_datetime_user_timezone_1 = datetime.strptime(sunset_datetime_user_timezone, '%Y-%m-%d %H:%M:%S') + timedelta(hours=1)
-        # Pero solo quiero la hora
-        sunset_datetime_user_timezone_1 = sunset_datetime_user_timezone_1.strftime('%H:%M:%S')
-
-        print('UTC +1 : ', sunset_datetime_user_timezone_1)
-
-        
-        st.success(f"La hora de la puesta de sol en {ubicacion} el dia {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_user_timezone_1}")
-        st.write(f"Las coordenadas de {ubicacion} son ({latnew}, {lonnew})")
+with col2:
+    if lat is not None and lon is not None:
+        m = folium.Map(location=[lat, lon], zoom_start=15)
+        folium.Marker([lat, lon], popup=ubicacion).add_to(m)
+        folium_static(m)
     else:
-        st.error("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
+        st.warning("Por favor, ingrese una ubicación válida.")
