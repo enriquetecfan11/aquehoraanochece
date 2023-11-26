@@ -1,8 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import requests
-from deep_translator import GoogleTranslator
-
 
 st.set_page_config(
     page_title='A qué hora anochece',
@@ -76,12 +74,11 @@ with col1:
 
             if weather_data['cod'] == 200:
               weather_description = weather_data['weather'][0]['description'].capitalize()
-              weather_description_translated = GoogleTranslator(source='auto', target='es').translate(weather_description)
               temperature = weather_data['main']['temp']
               temperature_celsius = temperature - 273.15  # Convertir a Celsius
       
               st.markdown("### Información meteorológica en tiempo real:")
-              st.markdown(f"El clima en {ubicacion} es {weather_description_translated} con una temperatura de {temperature_celsius:.2f}°C")
+              st.markdown(f"El clima en {ubicacion} es {weather_description} con una temperatura de {temperature_celsius:.2f}°C")
         
 
 
