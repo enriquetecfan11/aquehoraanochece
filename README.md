@@ -1,37 +1,47 @@
-# My Streamlit App
+# Sunset Time - Streamlit App
 
-This is a simple Streamlit application that demonstrates the basic functionality of Streamlit.
+This Streamlit app allows users to get the sunset time and weather information for a specific location. It also displays an interactive map of the provided location using `Folium`. The app leverages multiple APIs to provide accurate sunset and weather data.
 
-## Setup
+## Features
 
-To set up this application, follow these steps:
+- **Sunset Time**: Enter a location and a date to get the time of sunset.
+- **Weather Information**: Provides current weather conditions, including a description and temperature for the specified location.
+- **Interactive Map**: Displays an interactive map of the entered location using `Folium`.
 
-1. Clone this repository to your local machine.
-2. Navigate to the project directory in your terminal.
-3. Install the required Python packages using pip:
+## Technologies Used
 
-```bash
-pip install -r requirements.txt
-```
+- **Streamlit**: A Python framework for creating interactive web applications.
+- **Nominatim (OpenStreetMap)**: Converts the entered location into geographic coordinates (latitude and longitude).
+- **TimezoneFinder**: Determines the correct timezone based on coordinates.
+- **Sunrise-Sunset API**: Retrieves sunset times in UTC format.
+- **OpenWeatherMap API**: Provides weather information for the specified location.
+- **Folium**: Visualizes interactive maps.
 
-## Running the Application
+## Prerequisites
 
-To run the application, use the following command in your terminal:
+- Python 3.7 or higher
+- A valid API key from [OpenWeatherMap](https://home.openweathermap.org/api_keys)
 
-```bash
+## How to Run
+
+To run the app locally, activate your virtual environment and execute the following command:
+
+```sh
 streamlit run app.py
 ```
 
-This will start the Streamlit server and open the application in your default web browser.
+This will open the app in your browser, where you can enter a location and date to retrieve the desired information.
 
-## Using the Application
+## Notes
 
-The application interface is created using Streamlit's functions. You can interact with the application using the widgets on the sidebar. The main area of the application displays the output based on your input.
+- **Custom User-Agent**: The request to Nominatim (OpenStreetMap) includes a custom `User-Agent` header to avoid usage restrictions.
+- **Error Handling**: The app includes error handling for common issues like missing results, connectivity errors, and data processing problems.
 
-## Modules
+## License
 
-The `modules` directory contains additional Python modules that the application uses. These modules are imported in `app.py`.
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
 
-## Dependencies
+## Author
 
-The application's dependencies are listed in `requirements.txt`. These packages are necessary for the application to run correctly.
+Created by [Enrique Rodriguez Vela](https://github.com/enriqutecfan11).
+
