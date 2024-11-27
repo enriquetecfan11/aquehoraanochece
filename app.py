@@ -1,158 +1,88 @@
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
-from timezonefinder import TimezoneFinder
-import pytz
-import folium
 from streamlit_folium import st_folium
+import folium
 
-st.set_page_config(
-    page_title='A qué hora anochece',
-    page_icon='🌙',
-    layout='wide',
-    initial_sidebar_state='auto'
-)
+st.set_page_config(page_title='A qué hora anochece', page_icon='🌙', layout='wide')
 
-# CSS personalizado para mejorar el estilo de la página
-st.markdown(
-    """
-    <style>
-    .title {
-        font-size: 36px;
-        color: #333333;
-    }
-    .container {
-        max-width: 800px;
-        margin: auto;
-    }
-    .button {
-        padding: 10px 20px;
-        font-weight: bold;
-        border-radius: 5px;
-        background-color: #3498db;
-        color: white;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# Inicializar variables en session_state
+if 'sunset_info' not in st.session_state:
+    st.session_state.sunset_info = None
+if 'map_data' not in st.session_state:
+    st.session_state.map_data = None
 
-# Título de la aplicación
 st.title('A qué hora anochece')
 st.markdown("---")
 
-# Dividir la pantalla en dos columnas para separar la entrada de datos y el mapa
-col1, col2 = st.columns([1, 1])
-lat, lon = None, None
+# Entrada de ubicación y fecha
+ubicacion = st.text_input("Ingrese su ubicación:")
+fecha = st.date_input("Seleccione la fecha:", datetime.today())
 
-with col1:
-    # Entrada de ubicación y fecha
-    ubicacion = st.text_input("Ingrese su ubicación:")
-    fecha = st.date_input("Seleccione la fecha:", datetime.today())
-    if st.button("Obtener hora de la puesta de sol", key='get_sunset_time'):
-        if not ubicacion:
-            # Mostrar error si no se ha ingresado la ubicación
-            st.error("Ubicación no especificada. Por favor, ingrese una ubicación válida.")
-            st.stop()
+if 'map_data' not in st.session_state:
+    st.session_state.map_data = None
 
+if st.button("Obtener hora de la puesta de sol"):
+    if not ubicacion:
+        st.error("Ubicación no especificada. Por favor, ingrese una ubicación válida.")
+    else:
         try:
-            # Obtener coordenadas usando Nominatim (servicio de OpenStreetMap)
             headers = {'User-Agent': 'Mozilla/5.0 (compatible; StreamlitApp/1.0)'}
             response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}", headers=headers)
             response.raise_for_status()
             data = response.json()
             if not data:
-                # Mostrar error si no se encontraron resultados para la ubicación
                 st.error("No se encontraron coordenadas para la ubicación proporcionada.")
-                st.stop()
+            else:
+                lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
+                api_url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date={fecha.strftime('%Y-%m-%d')}&formatted=0"
+                response = requests.get(api_url)
+                response.raise_for_status()
+                data = response.json()
 
-            # Extraer latitud y longitud de los resultados
-            lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
-            
-            # Obtener la zona horaria utilizando TimezoneFinder
-            tf = TimezoneFinder()
-            timezone_str = tf.timezone_at(lat=lat, lng=lon)
-            if not timezone_str:
-                # Mostrar error si no se puede determinar la zona horaria
-                st.error("No se pudo determinar la zona horaria de la ubicación.")
-                st.stop()
-            timezone = pytz.timezone(timezone_str)
-            
-            # Preparar la URL para obtener los datos de la puesta de sol
-            api_url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date={fecha.strftime('%Y-%m-%d')}&formatted=0"
+                if data["status"] != "OK":
+                    st.error("No se pudo obtener la información de la puesta de sol. Intente nuevamente.")
+                else:
+                    sunset_time_utc = data["results"]["sunset"]
+                    sunset_datetime_utc = datetime.strptime(sunset_time_utc, '%Y-%m-%dT%H:%M:%S+00:00')
+                    sunset_time = sunset_datetime_utc.strftime('%H:%M:%S')
+                    
+                    # Guardar información en session_state
+                    st.session_state.sunset_info = {
+                        'ubicacion': ubicacion,
+                        'fecha': fecha,
+                        'sunset_time': sunset_time
+                    }
+                    st.session_state.map_data = {
+                        'lat': lat,
+                        'lon': lon
+                    }
+
         except requests.exceptions.RequestException as e:
-            # Manejar errores relacionados con la solicitud HTTP
-            st.error(f"Error al obtener las coordenadas: {e}")
-            st.stop()
-        except ValueError:
-            # Manejar errores relacionados con la conversión de datos
-            st.error("Error al procesar los datos de la ubicación. Por favor, intente con otra ubicación.")
-            st.stop()
+            st.error(f"Error al obtener los datos: {e}")
 
-        try:
-            # Obtener datos de la puesta de sol usando la API sunrise-sunset
-            response = requests.get(api_url)
-            response.raise_for_status()
-            data = response.json()
+# Mostrar resultados si existen en session_state
+if st.session_state.sunset_info:
+    st.success(f"La hora de la puesta de sol en {st.session_state.sunset_info['ubicacion']} el {st.session_state.sunset_info['fecha'].strftime('%Y-%m-%d')} es a las {st.session_state.sunset_info['sunset_time']} UTC")
 
-            if data["status"] != "OK":
-                # Mostrar error si no se pudo obtener la información de la puesta de sol
-                st.error("No se pudo obtener la información de la puesta de sol. Intente nuevamente.")
-                st.stop()
+# Mostrar el mapa si los datos son válidos
+if st.session_state.map_data and 'lat' in st.session_state.map_data and 'lon' in st.session_state.map_data:
+    try:
+        lat = st.session_state.map_data['lat']
+        lon = st.session_state.map_data['lon']
+        
+        popup_hora = f"Puesta de sol a las {st.session_state.sunset_info['sunset_time']} UTC"
 
-            # Convertir la hora de la puesta de sol de UTC a la hora local del usuario
-            sunset_time_utc = data["results"]["sunset"]
-            sunset_datetime_utc = datetime.strptime(sunset_time_utc, '%Y-%m-%dT%H:%M:%S+00:00')
-            sunset_datetime_local = sunset_datetime_utc.astimezone(timezone)
-            
-            # Mostrar la hora de la puesta de sol en la zona horaria local
-            st.success(f"La hora de la puesta de sol en {ubicacion} el {fecha.strftime('%Y-%m-%d')} es a las {sunset_datetime_local.strftime('%H:%M:%S')} ({timezone_str})")
-        except requests.exceptions.RequestException as e:
-            # Manejar errores relacionados con la solicitud HTTP
-            st.error(f"Error al obtener la información de la puesta de sol: {e}")
-            st.stop()
-        except ValueError:
-            # Manejar errores relacionados con la conversión de datos
-            st.error("Error al procesar los datos de la puesta de sol. Por favor, intente nuevamente.")
-            st.stop()
-
-        try:
-            # Obtener información meteorológica usando OpenWeatherMap API
-            api_key = '959d55cbfd41bca8951a491bde080a8c'
-            weather_url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}"
-            weather_response = requests.get(weather_url)
-            weather_response.raise_for_status()
-            weather_data = weather_response.json()
-
-            if weather_data['cod'] != 200:
-                # Mostrar error si no se pudo obtener la información meteorológica
-                st.error("No se pudo obtener información meteorológica. Intente nuevamente.")
-                st.stop()
-
-            # Extraer y convertir la descripción del clima y la temperatura
-            weather_description = weather_data['weather'][0]['description'].capitalize()
-            temperature = weather_data['main']['temp']
-            temperature_celsius = temperature - 273.15  # Convertir de Kelvin a Celsius
-
-            # Mostrar la información meteorológica al usuario
-            st.markdown("### Información meteorológica en tiempo real:")
-            st.markdown(f"El clima en {ubicacion} es {weather_description} con una temperatura de {temperature_celsius:.2f}°C")
-        except requests.exceptions.RequestException as e:
-            # Manejar errores relacionados con la solicitud HTTP
-            st.error(f"Error al obtener la información meteorológica: {e}")
-        except ValueError:
-            # Manejar errores relacionados con la conversión de datos
-            st.error("Error al procesar los datos meteorológicos. Por favor, intente nuevamente.")
-
-with col2:
-    # Mostrar el mapa de la ubicación si se han obtenido las coordenadas
-    if lat is not None and lon is not None:
-        st.markdown("### Mapa de la ubicación:")
-        # Crear el mapa usando Folium centrado en la ubicación especificada
-        map_object = folium.Map(location=[lat, lon], zoom_start=12)
-        folium.Marker([lat, lon], popup=ubicacion).add_to(map_object)
-        # Mostrar el mapa en la aplicación
-        st_folium(map_object, width=700, height=400)
-    else:
-        # Mostrar advertencia si no hay ubicación especificada
-        st.warning("Por favor, ingrese una ubicación para ver el mapa.")
+        # Verificar valores de lat y lon
+        if -90 <= lat <= 90 and -180 <= lon <= 180:
+            m = folium.Map(location=[lat, lon], zoom_start=12, width=800, height=800)  # Ajusta el tamaño del mapa
+            folium.Marker([lat, lon], popup=popup_hora).add_to(m)
+            map_object = folium.Map(location=[lat, lon], zoom_start=12)
+            folium.Marker([lat, lon], popup=ubicacion).add_to(map_object)
+            st_folium(m)
+        else:
+            st.write("Latitud o longitud fuera de rango.")
+    except Exception as e:
+        st.write(f"Error al renderizar el mapa: {e}")
+else:
+    st.write("No hay datos para mostrar el mapa.")
