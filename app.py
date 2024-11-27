@@ -57,7 +57,8 @@ with col1:
 
         try:
             # Obtener coordenadas usando Nominatim (servicio de OpenStreetMap)
-            response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}")
+            headers = {'User-Agent': 'Mozilla/5.0 (compatible; StreamlitApp/1.0)'}
+            response = requests.get(f"https://nominatim.openstreetmap.org/search?format=json&q={ubicacion}", headers=headers)
             response.raise_for_status()
             data = response.json()
             if not data:
