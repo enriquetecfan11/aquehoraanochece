@@ -35,7 +35,7 @@ st.markdown(
 st.title('A qué hora anochece')
 st.markdown("---")
 
-col1, col2 = st.beta_columns([1, 1])  # Cambia 'columns' por 'beta_columns'
+col1, col2 = st.columns([1, 1])  # Cambia 'columns' por 'beta_columns'
 lat, lon = None, None
 
 with col1:
@@ -79,10 +79,6 @@ with col1:
       
               st.markdown("### Información meteorológica en tiempo real:")
               st.markdown(f"El clima en {ubicacion} es {weather_description} con una temperatura de {temperature_celsius:.2f}°C")
-        
-
-
-        
         else:
             st.error("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
             st.write("Hubo un error al obtener la información. Por favor, inténtalo de nuevo.")
